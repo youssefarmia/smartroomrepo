@@ -39,6 +39,9 @@ class DeviceState(BaseModel):
     device: str
     state: bool
 
+@app.get("/devices")
+def get_devices():
+    return device_state
 
 @app.get("/health")
 def health_check():

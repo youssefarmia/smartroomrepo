@@ -12,6 +12,34 @@ function App() {
   const [fanOn, setFanOn] = useState(false);
   const [lightOn, setLightOn] = useState(false);
 
+  // Replace your existing fan/light useState-only toggle functions with these:
+
+  const toggleFan = () => {
+    fetch('http://127.0.0.1:8000/devices/fan/toggle', { method: 'POST' })
+      .then((res) => res.json())
+      .then((data) => setFanOn(data.state))
+    .catch((err) => console.error('Failed to toggle fan:', err));
+  };
+
+  const toggleLight = () => {
+    fetch('http://127.0.0.1:8000/devices/light/toggle', { method: 'POST' })
+      .then((res) => res.json())
+      .then((data) => setLightOn(data.state))
+      .catch((err) => console.error('Failed to toggle light:', err));
+  };
+
+  //checks device state on start
+  useEffect(() => {
+  fetch('http://127.0.0.1:8000/devices')
+    .then((res) => res.json())
+    .then((data) => {
+      setFanOn(data.fan);
+      setLightOn(data.light);
+    })
+    .catch((err) => console.error('Failed to fetch device state:', err));
+}, []); // empty array = runs once when the page loads
+
+
   // Effect 1: gradually drift temperature and humidity every 2 seconds
   useEffect(() => {
     const interval = setInterval(() => {
@@ -71,13 +99,13 @@ function App() {
       </div>
 
       <div className="controls">
-        <button onClick={() => setFanOn(!fanOn)}>
-          Fan: {fanOn ? 'ON' : 'OFF'}
-        </button>
-        <button onClick={() => setLightOn(!lightOn)}>
-          Light: {lightOn ? 'ON' : 'OFF'}
-        </button>
-      </div>
+       <button onClick={toggleFan}>
+        Fan: {fanOn ? 'ON' : 'OFF'}
+       </button>
+       <button onClick={toggleLight}>
+        Light: {lightOn ? 'ON' : 'OFF'}
+       </button>
+</div>
     </div>
   );
 }
