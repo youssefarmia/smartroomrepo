@@ -43,6 +43,16 @@ class DeviceState(BaseModel):
 def get_devices():
     return device_state
 
+@app.get("/events")
+def get_events(limit: int = 20, db: Session = Depends(get_db)):
+    events = (
+        db.query(models.DeviceEvent)
+        .order_by(models.DeviceEvent.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+    return events
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
@@ -75,8 +85,18 @@ def get_history(limit: int = 20, db: Session = Depends(get_db)):
 
 
 @app.post("/devices/{device}/toggle", response_model=DeviceState)
-def toggle_device(device: str):
+def toggle_device(device: str, db: Session = Depends(get_db)):
     if device not in device_state:
         return {"error": f"Unknown device '{device}'"}
+
     device_state[device] = not device_state[device]
+
+    event = models.DeviceEvent(
+        timestamp=datetime.utcnow(),
+        device=device,
+        new_state=device_state[device],
+    )
+    db.add(event)
+    db.commit()
+
     return {"device": device, "state": device_state[device]}

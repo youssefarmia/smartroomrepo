@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './App.css';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 function App() {
   // Sensor state — these are the "live" values that will change over time
@@ -7,7 +8,11 @@ function App() {
   const [humidity, setHumidity] = useState(45);
   const [light, setLight] = useState(300);
   const [occupied, setOccupied] = useState(true);
-
+  const [history, setHistory] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
   // Device state — controlled by the buttons
   const [fanOn, setFanOn] = useState(false);
   const [lightOn, setLightOn] = useState(false);
@@ -28,6 +33,35 @@ function App() {
       .catch((err) => console.error('Failed to toggle light:', err));
   };
 
+  const loadHistory = () => {
+  setLoading(true);
+  setError(null);
+  Promise.all([
+    fetch('http://127.0.0.1:8000/history').then((res) => res.json()),
+    fetch('http://127.0.0.1:8000/events').then((res) => res.json()),
+  ])
+    .then(([historyData, eventsData]) => {
+      setHistory(historyData);
+      setEvents(eventsData);
+      setLoading(false);
+    })
+    .catch((err) => {
+      console.error('Failed to fetch history/events:', err);
+      setError('Could not load history.');
+      setLoading(false);
+    });
+};
+
+const handleShowHistory = () => {
+  const next = !showHistory;
+  setShowHistory(next);
+  if (next) {
+    loadHistory(); // only fetch when opening, not when closing
+  }
+};
+
+
+
   //checks device state on start
   useEffect(() => {
   fetch('http://127.0.0.1:8000/devices')
@@ -39,6 +73,23 @@ function App() {
     .catch((err) => console.error('Failed to fetch device state:', err));
 }, []); // empty array = runs once when the page loads
 
+  //ask for history
+  useEffect(() => {
+  Promise.all([
+    fetch('http://127.0.0.1:8000/history').then((res) => res.json()),
+    fetch('http://127.0.0.1:8000/events').then((res) => res.json()),
+  ])
+    .then(([historyData, eventsData]) => {
+      setHistory(historyData);
+      setEvents(eventsData);
+      setLoading(false);
+    })
+    .catch((err) => {
+      console.error('Failed to fetch history/events:', err);
+      setError('Could not load history.');
+      setLoading(false);
+    });
+}, []); // empty array = runs once when the page first loads
 
   // Effect 1: gradually drift temperature and humidity every 2 seconds
   useEffect(() => {
@@ -105,8 +156,45 @@ function App() {
        <button onClick={toggleLight}>
         Light: {lightOn ? 'ON' : 'OFF'}
        </button>
-</div>
+           <button onClick={handleShowHistory}>{showHistory ?'hide history':'show history'}</button>
+      </div>
+     {showHistory && (
+  <div className="history-section">
+    <h2>Temperature History</h2>
+    {loading && <p>Loading...</p>}
+    {error && <p>{error}</p>}
+    {!loading && !error && history.length === 0 && <p>No data yet.</p>}
+    {!loading && !error && history.length > 0 && (
+      <ResponsiveContainer width="100%" height={250}>
+        <LineChart data={history}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="timestamp" tick={false} />
+          <YAxis domain={['auto', 'auto']} />
+          <Tooltip />
+          <Line type="monotone" dataKey="temperature" stroke="#8884d8" dot={false} />
+        </LineChart>
+      </ResponsiveContainer>
+
+      
+    )}
+     <h2>Event Log</h2>
+    {!loading && !error && events.length === 0 && <p>No events yet.</p>}
+    {!loading && !error && events.length > 0 && (
+      <ul>
+        {events.map((e) => (
+          <li key={e.id}>
+            {e.device} turned {e.new_state ? 'ON' : 'OFF'} at{' '}
+            {new Date(e.timestamp).toLocaleTimeString()}
+          </li>
+        ))}
+      </ul>
+    )}
+   
+  </div>
+)}
     </div>
+
+     
   );
 }
 
