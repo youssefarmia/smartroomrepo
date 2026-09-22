@@ -39,6 +39,48 @@ class DeviceState(BaseModel):
     device: str
     state: bool
 
+import asyncio
+import random
+
+FAN_AUTO_THRESHOLD = 26
+BASELINE_TEMP = 25
+
+async def simulate_room():
+    while True:
+        await asyncio.sleep(2)
+
+        prev_temp = sensor_state["temperature"]
+        if device_state["fan"]:
+            change = -0.3
+        else:
+            tempstabilizing = 0.05
+            change = (BASELINE_TEMP - prev_temp) * tempstabilizing + (random.random() - 0.5) * 0.2
+        sensor_state["temperature"] = max(18, min(28, prev_temp + change))
+
+        prev_hum = sensor_state["humidity"]
+        sensor_state["humidity"] = max(30, min(70, prev_hum + (random.random() - 0.5)))
+
+        sensor_state["light"] = 800 if device_state["light"] else 300
+
+        # occasional occupancy flip
+        if random.random() < 0.05:  # roughly every ~40s on average at 2s ticks
+            sensor_state["occupied"] = not sensor_state["occupied"]
+
+        # Day 11 automation: fan auto-on above threshold
+        if sensor_state["temperature"] > FAN_AUTO_THRESHOLD and not device_state["fan"]:
+            device_state["fan"] = True
+            # (log a DeviceEvent here too, same pattern as your toggle route)
+
+        # Day 11 automation: light auto-off when unoccupied
+        if not sensor_state["occupied"] and device_state["light"]:
+            device_state["light"] = False
+            # (log a DeviceEvent here too)
+
+
+@app.on_event("startup")
+async def start_simulation():
+    asyncio.create_task(simulate_room())    
+
 @app.get("/devices")
 def get_devices():
     return device_state

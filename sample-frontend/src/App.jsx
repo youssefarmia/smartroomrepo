@@ -13,6 +13,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
+  const FAN_AUTO_THRESHOLD = 26;
   // Device state — controlled by the buttons
   const [fanOn, setFanOn] = useState(false);
   const [lightOn, setLightOn] = useState(false);
@@ -91,48 +92,37 @@ const handleShowHistory = () => {
     });
 }, []); // empty array = runs once when the page first loads
 
-  // Effect 1: gradually drift temperature and humidity every 2 seconds
+useEffect(() => {
+  if (temperature > FAN_AUTO_THRESHOLD && !fanOn) {
+    toggleFan();
+  }
+}, [temperature, fanOn]);
+
+
+useEffect(() => {
+  if (!occupied && lightOn) {
+    toggleLight();
+  }
+}, [occupied, lightOn]);
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTemperature((prev) => {
-        const baseline = 25;
-        let change;
-        if (fanOn){
-                 const tempstabilizing = 0.05;
-        change = -0.3 + (baseline - prev)*tempstabilizing + (Math.random()-0.5)*0.2;
-        }
-        else{
-          const tempstabilizing = 0.05;
-        change = (baseline - prev)*tempstabilizing + (Math.random()-0.5)*0.2;
-        }
-        const next = prev + change;
-        return next;
-      });
+  const fetchSensors = () => {
+    fetch('http://127.0.0.1:8000/sensors')
+      .then((res) => res.json())
+      .then((data) => {
+        setTemperature(data.temperature);
+        setHumidity(data.humidity);
+        setLight(data.light);
+        setOccupied(data.occupied);
+      })
+      .catch((err) => console.error('Failed to fetch sensors:', err));
+  };
 
-      setHumidity((prev) => {
-        const change = (Math.random() - 0.5) * 1;
-        const next = prev + change;
-        return Math.min(70, Math.max(30, next));
-      });
-    }, 2000); // runs every 2000ms = 2 seconds
+  fetchSensors(); // initial load
+  const interval = setInterval(fetchSensors, 2000); // poll every 2s
 
-    // Cleanup: stops the timer if the component unmounts or fanOn changes
-    return () => clearInterval(interval);
-  }, [fanOn]); // re-run this effect whenever fanOn changes
-
-  // Effect 2: light level responds to the light toggle
-  useEffect(() => {
-    setLight(lightOn ? 800 : 300);
-  }, [lightOn]);
-
-  // Effect 3: occupancy flips randomly every 20 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setOccupied((prev) => (Math.random() > 0.3 ? prev : !prev));
-    }, 20000);
-
-    return () => clearInterval(interval);
-  }, []); // empty array = only set up once, never re-run
+  return () => clearInterval(interval);
+}, []);
 
   return (
     <div className="dashboard">
