@@ -26,7 +26,7 @@ def get_db():
     finally:
         db.close()
 
-sensor_state = {"temperature": 22.0, "humidity": 45.0, "light": 300, "occupied": True}
+sensor_state = {"temperature": 22.0, "humidity": 45.0, "light": 300, "occupied": True, "_previous_occupied" : True}
 device_state = {"fan": False, "light": False}
 
 class SensorReading(BaseModel):
@@ -62,19 +62,20 @@ async def simulate_room():
 
         sensor_state["light"] = 800 if device_state["light"] else 300
 
-        # occasional occupancy flip
-        if random.random() < 0.05:  # roughly every ~40s on average at 2s ticks
+               # occasional occupancy flip
+        if random.random() < 0.05:
             sensor_state["occupied"] = not sensor_state["occupied"]
 
         # Day 11 automation: fan auto-on above threshold
         if sensor_state["temperature"] > FAN_AUTO_THRESHOLD and not device_state["fan"]:
             device_state["fan"] = True
-            # (log a DeviceEvent here too, same pattern as your toggle route)
 
-        # Day 11 automation: light auto-off when unoccupied
-        if not sensor_state["occupied"] and device_state["light"]:
+        # Day 11 automation: light auto-off ONLY on the moment it becomes unoccupied
+        just_became_unoccupied = sensor_state["_previous_occupied"] and not sensor_state["occupied"]
+        if just_became_unoccupied and device_state["light"]:
             device_state["light"] = False
-            # (log a DeviceEvent here too)
+
+        sensor_state["_previous_occupied"] = sensor_state["occupied"]  # always update, every tick
 
 
 @app.on_event("startup")

@@ -93,17 +93,21 @@ const handleShowHistory = () => {
 }, []); // empty array = runs once when the page first loads
 
 useEffect(() => {
-  if (temperature > FAN_AUTO_THRESHOLD && !fanOn) {
-    toggleFan();
-  }
-}, [temperature, fanOn]);
+  const fetchDevices = () => {
+    fetch('http://127.0.0.1:8000/devices')
+      .then((res) => res.json())
+      .then((data) => {
+        setFanOn(data.fan);
+        setLightOn(data.light);
+      })
+      .catch((err) => console.error('Failed to fetch device state:', err));
+  };
 
+  fetchDevices();
+  const interval = setInterval(fetchDevices, 2000);
 
-useEffect(() => {
-  if (!occupied && lightOn) {
-    toggleLight();
-  }
-}, [occupied, lightOn]);
+  return () => clearInterval(interval);
+}, []);
 
   useEffect(() => {
   const fetchSensors = () => {
