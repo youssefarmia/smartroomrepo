@@ -18,6 +18,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def log_device_event(db, device, new_state, triggered_by="manual", reason=None):
+    event = models.DeviceEvent(
+        timestamp=datetime.utcnow(),
+        device=device,
+        new_state=new_state,
+        triggered_by=triggered_by,
+        reason=reason,
+    )
+    db.add(event)
+    db.commit()
+
 # Dependency: gives each request its own DB session, closes it after
 def get_db():
     db = SessionLocal()
@@ -62,20 +73,31 @@ async def simulate_room():
 
         sensor_state["light"] = 800 if device_state["light"] else 300
 
-               # occasional occupancy flip
         if random.random() < 0.05:
             sensor_state["occupied"] = not sensor_state["occupied"]
 
-        # Day 11 automation: fan auto-on above threshold
-        if sensor_state["temperature"] > FAN_AUTO_THRESHOLD and not device_state["fan"]:
-            device_state["fan"] = True
+        db = SessionLocal()
+        try:
+            if sensor_state["temperature"] > FAN_AUTO_THRESHOLD and not device_state["fan"]:
+                device_state["fan"] = True
+                log_device_event(
+                    db, "fan", True,
+                    triggered_by="automation",
+                    reason=f"Temperature reached {sensor_state['temperature']:.1f}°C",
+                )
 
-        # Day 11 automation: light auto-off ONLY on the moment it becomes unoccupied
-        just_became_unoccupied = sensor_state["_previous_occupied"] and not sensor_state["occupied"]
-        if just_became_unoccupied and device_state["light"]:
-            device_state["light"] = False
+            just_became_unoccupied = sensor_state["_previous_occupied"] and not sensor_state["occupied"]
+            if just_became_unoccupied and device_state["light"]:
+                device_state["light"] = False
+                log_device_event(
+                    db, "light", False,
+                    triggered_by="automation",
+                    reason="Room became unoccupied",
+                )
 
-        sensor_state["_previous_occupied"] = sensor_state["occupied"]  # always update, every tick
+            sensor_state["_previous_occupied"] = sensor_state["occupied"]
+        finally:
+            db.close()
 
 
 @app.on_event("startup")
@@ -133,13 +155,6 @@ def toggle_device(device: str, db: Session = Depends(get_db)):
         return {"error": f"Unknown device '{device}'"}
 
     device_state[device] = not device_state[device]
-
-    event = models.DeviceEvent(
-        timestamp=datetime.utcnow(),
-        device=device,
-        new_state=device_state[device],
-    )
-    db.add(event)
-    db.commit()
+    log_device_event(db, device, device_state[device], triggered_by="manual")
 
     return {"device": device, "state": device_state[device]}

@@ -177,8 +177,10 @@ useEffect(() => {
       <ul>
         {events.map((e) => (
           <li key={e.id}>
-            {e.device} turned {e.new_state ? 'ON' : 'OFF'} at{' '}
-            {new Date(e.timestamp).toLocaleTimeString()}
+            {e.device} turned {e.new_state ? 'ON' : 'OFF'}
+            {e.triggered_by === 'automation' ? ' automatically' : ''}
+            {' '}at {new Date(e.timestamp).toLocaleTimeString()}
+            {e.reason && <span className="reason"> — {e.reason}</span>}
           </li>
         ))}
       </ul>

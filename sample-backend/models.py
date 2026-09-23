@@ -19,3 +19,5 @@ class DeviceEvent(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
     device = Column(String)
     new_state = Column(Boolean)
+    triggered_by = Column(String, default="manual")
+    reason = Column(String, nullable=True)
