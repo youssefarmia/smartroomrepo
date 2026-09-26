@@ -40,6 +40,11 @@ def get_db():
 sensor_state = {"temperature": 22.0, "humidity": 45.0, "light": 300, "occupied": True, "_previous_occupied" : True}
 device_state = {"fan": False, "light": False}
 
+DEVICE_WATTAGE = {
+    "fan": 50,    # watts
+    "light": 10,  # watts
+}
+
 class SensorReading(BaseModel):
     temperature: float
     humidity: float
@@ -158,3 +163,40 @@ def toggle_device(device: str, db: Session = Depends(get_db)):
     log_device_event(db, device, device_state[device], triggered_by="manual")
 
     return {"device": device, "state": device_state[device]}
+
+@app.get("/energy")
+def get_energy(db: Session = Depends(get_db)):
+    result = {}
+    for device, watts in DEVICE_WATTAGE.items():
+        events = (
+            db.query(models.DeviceEvent)
+            .filter(models.DeviceEvent.device == device)
+            .order_by(models.DeviceEvent.timestamp.asc())
+            .all()
+        )
+
+        total_seconds_on = 0
+        last_on_time = None
+
+        for e in events:
+            if e.new_state:  # turned ON
+                last_on_time = e.timestamp
+            else:  # turned OFF
+                if last_on_time:
+                    total_seconds_on += (e.timestamp - last_on_time).total_seconds()
+                    last_on_time = None
+
+        # If it's still on right now, count time up to this moment too
+        if last_on_time and device_state[device]:
+            total_seconds_on += (datetime.utcnow() - last_on_time).total_seconds()
+
+        hours_on = total_seconds_on / 3600
+        energy_wh = hours_on * watts
+
+        result[device] = {
+            "watts": watts,
+            "hours_on": round(hours_on, 3),
+            "energy_wh": round(energy_wh, 2),
+        }
+
+    return result

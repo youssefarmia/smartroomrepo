@@ -17,6 +17,7 @@ function App() {
   // Device state — controlled by the buttons
   const [fanOn, setFanOn] = useState(false);
   const [lightOn, setLightOn] = useState(false);
+  const [Energy, setEnergy] = useState(null);
 
   // Replace your existing fan/light useState-only toggle functions with these:
 
@@ -40,14 +41,16 @@ function App() {
   Promise.all([
     fetch('http://127.0.0.1:8000/history').then((res) => res.json()),
     fetch('http://127.0.0.1:8000/events').then((res) => res.json()),
+    fetch('http://127.0.0.1:8000/energy').then((res) => res.json()),
   ])
-    .then(([historyData, eventsData]) => {
+    .then(([historyData, eventsData, energyData]) => {
       setHistory(historyData);
       setEvents(eventsData);
+      setEnergy(energyData);
       setLoading(false);
     })
     .catch((err) => {
-      console.error('Failed to fetch history/events:', err);
+      console.error('Failed to fetch history/events/energy:', err);
       setError('Could not load history.');
       setLoading(false);
     });
@@ -168,9 +171,21 @@ useEffect(() => {
           <Line type="monotone" dataKey="temperature" stroke="#8884d8" dot={false} />
         </LineChart>
       </ResponsiveContainer>
-
+    
       
     )}
+
+    <h2>Energy Usage</h2>
+    {Energy && (
+      <ul>
+        {Object.entries(Energy).map(([device, stats]) => (
+          <li key={device}>
+            {device}: {stats.Energy_wh} Wh ({stats.hours_on.toFixed(2)}h @ {stats.watts}W)
+          </li>
+        ))}
+      </ul>
+    )}
+
      <h2>Event Log</h2>
     {!loading && !error && events.length === 0 && <p>No events yet.</p>}
     {!loading && !error && events.length > 0 && (
