@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from database import engine, SessionLocal, Base
 import models
@@ -166,37 +166,55 @@ def toggle_device(device: str, db: Session = Depends(get_db)):
 
 @app.get("/energy")
 def get_energy(db: Session = Depends(get_db)):
+    cutoff = datetime.utcnow() - timedelta(days=1)
     result = {}
+
     for device, watts in DEVICE_WATTAGE.items():
+        # Step 1: find the most recent event BEFORE the cutoff, if any
+        prior_event = (
+            db.query(models.DeviceEvent)
+            .filter(models.DeviceEvent.device == device)
+            .filter(models.DeviceEvent.timestamp < cutoff)
+            .order_by(models.DeviceEvent.timestamp.desc())
+            .first()
+        )
+
+        # Step 2: if it was ON going into the window, start the clock at the cutoff itself
+        if prior_event and prior_event.new_state:
+            last_on_time = cutoff
+        else:
+            last_on_time = None
+
+        # Step 3: now process events INSIDE the window, same pairing logic as before
         events = (
             db.query(models.DeviceEvent)
             .filter(models.DeviceEvent.device == device)
+            .filter(models.DeviceEvent.timestamp >= cutoff)
             .order_by(models.DeviceEvent.timestamp.asc())
             .all()
         )
 
         total_seconds_on = 0
-        last_on_time = None
 
         for e in events:
-            if e.new_state:  # turned ON
+            if e.new_state:
                 last_on_time = e.timestamp
-            else:  # turned OFF
+            else:
                 if last_on_time:
                     total_seconds_on += (e.timestamp - last_on_time).total_seconds()
                     last_on_time = None
 
-        # If it's still on right now, count time up to this moment too
+        # Still on right now? Count up to this moment.
         if last_on_time and device_state[device]:
             total_seconds_on += (datetime.utcnow() - last_on_time).total_seconds()
 
         hours_on = total_seconds_on / 3600
-        energy_wh = hours_on * watts
+        Energy_wh = hours_on * watts
 
         result[device] = {
             "watts": watts,
             "hours_on": round(hours_on, 3),
-            "energy_wh": round(energy_wh, 2),
+            "Energy_wh": round(Energy_wh, 2),
         }
 
     return result
