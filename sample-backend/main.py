@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -157,7 +157,7 @@ def get_history(limit: int = 20, db: Session = Depends(get_db)):
 @app.post("/devices/{device}/toggle", response_model=DeviceState)
 def toggle_device(device: str, db: Session = Depends(get_db)):
     if device not in device_state:
-        return {"error": f"Unknown device '{device}'"}
+        raise HTTPException(status_code=404, detail=f"Unknown device '{device}'")
 
     device_state[device] = not device_state[device]
     log_device_event(db, device, device_state[device], triggered_by="manual")
