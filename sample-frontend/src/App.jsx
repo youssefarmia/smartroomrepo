@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import lightOnEmptyImg from './assets/light-on.png';
+import lightOffEmptyImg from './assets/light-off.png';
+import lightOnOccImg from './assets/light-on-occupied.png';
+import lightOffOccImg from './assets/light-off-occupied.png';
 
 function App() {
   // Sensor state — these are the "live" values that will change over time
@@ -126,7 +130,7 @@ useEffect(() => {
   };
 
   fetchSensors(); // initial load
-  const interval = setInterval(fetchSensors, 2000); // poll every 2s
+  const interval = setInterval(fetchSensors, 500); // poll every 2s
 
   return () => clearInterval(interval);
 }, []);
@@ -142,18 +146,42 @@ useEffect(() => {
         <div className="card">🚶 Occupancy: {occupied ? 'Yes' : 'No'}</div>
       </div>
 
-      <div className="room-view">
-        <p>Room View (placeholder)</p>
-      </div>
+     <div className="room-view">
+  <img
+  src={
+    lightOn
+      ? (occupied ? lightOnOccImg : lightOnEmptyImg)
+      : (occupied ? lightOffOccImg : lightOffEmptyImg)
+  }
+  alt={`Room is ${occupied ? 'occupied' : 'empty'}, light is ${lightOn ? 'on' : 'off'}`}
+  className="room-image"
+/>
+</div>
 
       <div className="controls">
-       <button onClick={toggleFan}>
-        Fan: {fanOn ? 'ON' : 'OFF'}
-       </button>
-       <button onClick={toggleLight}>
-        Light: {lightOn ? 'ON' : 'OFF'}
-       </button>
-           <button onClick={handleShowHistory}>{showHistory ?'hide history':'show history'}</button>
+      <button
+  onClick={toggleFan}
+  aria-label={`Turn fan ${fanOn ? 'off' : 'on'}`}
+  title={`Turn fan ${fanOn ? 'off' : 'on'}`}
+>
+  Fan: {fanOn ? 'ON' : 'OFF'}
+</button>
+
+<button
+  onClick={toggleLight}
+  aria-label={`Turn light ${lightOn ? 'off' : 'on'}`}
+  title={`Turn light ${lightOn ? 'off' : 'on'}`}
+>
+  Light: {lightOn ? 'ON' : 'OFF'}
+</button>
+
+<button
+  onClick={handleShowHistory}
+  aria-label={showHistory ? 'Hide history section' : 'Show history section'}
+  title={showHistory ? 'Hide history section' : 'Show history section'}
+>
+  {showHistory ? 'Hide History' : 'Show History'}
+</button>
       </div>
      {showHistory && (
   <div className="history-section">
