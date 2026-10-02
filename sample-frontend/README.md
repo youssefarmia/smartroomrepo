@@ -1,16 +1,47 @@
-# React + Vite
+## Getting Started
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+### Prerequisites
+- Git
+- Python 3.10+ (with pip)
+- Node.js 18+ (with npm)
 
-Currently, two official plugins are available:
+### 1. Clone the repository
+```bash
+git clone <your-repo-url>
+cd <repo-folder-name>
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### 2. Backend setup
+```bash
+cd backend
+python -m venv venv
+```
 
-## React Compiler
+Activate the virtual environment:
+- Windows: `venv\Scripts\activate`
+- Mac/Linux: `source venv/bin/activate`
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-## Expanding the Oxlint configuration
+Run the backend server:
+```bash
+python -m uvicorn main:app --reload
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+The backend will be running at `http://127.0.0.1:8000`. You can view the interactive API docs at `http://127.0.0.1:8000/docs`.
+
+### 3. Frontend setup
+Open a **new terminal window** (leave the backend running in the first one):
+```bash
+cd sample-frontend
+npm install
+npm run dev
+```
+
+The dashboard will be available at the URL printed in the terminal (usually `http://localhost:5173`).
+
+### 4. Using the app
+Open the frontend URL in your browser. The dashboard will start polling the backend automatically — sensor values, device states, and automations are all running server-side as soon as the backend starts.
