@@ -7,7 +7,7 @@
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/youssefarmia/testrepository
+git clone https://github.com/youssefarmia/smartroomrepo
 cd smartroomrepo
 ```
 
