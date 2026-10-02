@@ -33,11 +33,19 @@ function App() {
   };
 
   const toggleLight = () => {
-    fetch('http://127.0.0.1:8000/devices/light/toggle', { method: 'POST' })
-      .then((res) => res.json())
-      .then((data) => setLightOn(data.state))
-      .catch((err) => console.error('Failed to toggle light:', err));
-  };
+  fetch('http://127.0.0.1:8000/devices/light/toggle', { method: 'POST' })
+    .then((res) => res.json())
+    .then((data) => {
+      setLightOn(data.state);
+      // immediately fetch the updated sensor reading, don't wait for the next poll
+      return fetch('http://127.0.0.1:8000/sensors');
+    })
+    .then((res) => res.json())
+    .then((sensorData) => {
+      setLight(sensorData.light);
+    })
+    .catch((err) => console.error('Failed to toggle light:', err));
+};
 
   const loadHistory = () => {
   setLoading(true);
@@ -130,7 +138,7 @@ useEffect(() => {
   };
 
   fetchSensors(); // initial load
-  const interval = setInterval(fetchSensors, 500); // poll every 2s
+  const interval = setInterval(fetchSensors, 2000); // poll every 2s
 
   return () => clearInterval(interval);
 }, []);
