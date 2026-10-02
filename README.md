@@ -7,8 +7,8 @@
 
 ### 1. Clone the repository
 ```bash
-git clone <your-repo-url>
-cd <repo-folder-name>
+git clone https://github.com/youssefarmia/testrepository
+cd smartroomrepo
 ```
 
 ### 2. Backend setup
@@ -36,7 +36,7 @@ The backend will be running at `http://127.0.0.1:8000`. You can view the interac
 ### 3. Frontend setup
 Open a **new terminal window** (leave the backend running in the first one):
 ```bash
-cd sample-frontend
+cd frontend
 npm install
 npm run dev
 ```
